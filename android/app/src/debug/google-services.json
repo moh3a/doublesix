@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "588879892244",
+    "project_id": "double-six-f7530",
+    "storage_bucket": "double-six-f7530.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:588879892244:android:798ce61164faa0b288fc01",
+        "android_client_info": {
+          "package_name": "com.doublesix.doublesix"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "588879892244-4nm1ad695vobpbgsqfa7vai0dsb0o84e.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDuwXeMBpZyY0e9rWEDinoFyOD1Bra388Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "588879892244-4nm1ad695vobpbgsqfa7vai0dsb0o84e.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
