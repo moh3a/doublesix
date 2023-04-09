@@ -3,7 +3,7 @@
     "scheme": "doublesix",
     "name": "Double Six",
     "slug": "doublesix",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -30,6 +30,7 @@
       "eas": {
         "projectId": "cdb5aaed-482f-4457-973c-31fa896e83b1"
       }
-    }
+    },
+    "plugins": ["@config-plugins/react-native-webrtc"]
   }
 }

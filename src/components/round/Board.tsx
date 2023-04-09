@@ -310,7 +310,8 @@ const Board = () => {
            */}
           <View
             style={{
-              ...styles.boardRow,
+              position: "relative",
+              backgroundColor: "transparent",
               top: 0,
               right: 0,
               left: 0,
