@@ -2,6 +2,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import Text from "../components/shared/Text";
 import View from "../components/shared/View";
+import Video from "../components/rtc/Video";
 
 export default function InfoScreen() {
   const insets = useSafeAreaInsets();
@@ -16,6 +17,7 @@ export default function InfoScreen() {
       }}
     >
       <Text>~ learn about double six rules ~</Text>
+      <Video />
     </View>
   );
 }
