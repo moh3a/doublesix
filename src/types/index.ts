@@ -349,6 +349,7 @@ export type RootTabParamList = {
     roundId: string;
   };
   Account: undefined;
+  Call: undefined;
   Info: undefined;
 };
 

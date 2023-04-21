@@ -36,7 +36,8 @@
     "zustand": "^4.3.7"
   },
   "devDependencies": {
-    "@babel/core": "^7.20.0"
+    "@babel/core": "^7.20.0",
+    "@types/react-native-webrtc": "^1.75.5"
   },
   "private": true
 }

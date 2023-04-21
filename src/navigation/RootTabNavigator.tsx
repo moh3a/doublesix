@@ -42,6 +42,7 @@ import {
   gamesOnSnapshotHandler,
   roundsOnSnapshotHandler,
 } from "../hooks/handlers";
+import CallScreen from "../screens/CallScreen";
 
 const Stack = createNativeStackNavigator<RootTabParamList>();
 
@@ -261,6 +262,18 @@ function RootTabNavigator(
         component={AccountScreen}
         options={({ navigation }: RootTabScreenProps<"Account">) => ({
           title: "Account",
+          orientation: "portrait",
+          headerTitleAlign: "center",
+          headerTransparent: false,
+          headerShadowVisible: false,
+          statusBarTranslucent: true,
+        })}
+      />
+      <Stack.Screen
+        name="Call"
+        component={CallScreen}
+        options={({ navigation }: RootTabScreenProps<"Call">) => ({
+          title: "Call",
           orientation: "portrait",
           headerTitleAlign: "center",
           headerTransparent: false,

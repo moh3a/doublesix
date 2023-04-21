@@ -14,3 +14,4 @@
 -keep class com.facebook.jni.** { *; }
 
 # Add any project specific keep options here:
+-keep class org.webrtc.** { *; }

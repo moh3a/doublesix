@@ -40,6 +40,11 @@ const linking: LinkingOptions<RootStackParamList> = {
               AccountScreen: "account",
             },
           },
+          Call: {
+            screens: {
+              CallScreen: "screen",
+            },
+          },
           Info: {
             screens: {
               InfoScreen: "info",

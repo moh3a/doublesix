@@ -116,6 +116,14 @@ const Home = ({ navigation }: HomeProps) => {
           play offline
         </Button>
       </View>
+      <View
+        style={{
+          marginVertical: 2,
+          marginHorizontal: Layout.window.width / 10,
+        }}
+      >
+        <Button onPress={() => navigation.navigate("Call")}>call</Button>
+      </View>
       <Modal open={openModal} setOpen={setOpenModal}>
         <View style={{ margin: 10 }}>
           <Text style={{ marginVertical: 20 }}>Do you want to create a...</Text>
