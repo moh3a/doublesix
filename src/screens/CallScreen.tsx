@@ -18,11 +18,9 @@ import {
   collection,
   doc,
   getDoc,
-  getDocs,
   onSnapshot,
   setDoc,
   updateDoc,
-  deleteDoc,
   arrayUnion,
 } from "firebase/firestore";
 
@@ -43,6 +41,8 @@ export default function CallScreen() {
 
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+
+  // todo: create multiple peers: remoteStreams as MediaStream[]
 
   const [webcamStarted, setWebcamStarted] = useState(false);
   const [channelId, setChannelId] = useState<string>(
@@ -185,7 +185,10 @@ export default function CallScreen() {
   };
 
   const endCall = async () => {
-    localStream?.getTracks().forEach((track) => localStream.removeTrack(track));
+    localStream?.getTracks().forEach((track) => {
+      track.stop();
+      localStream.removeTrack(track);
+    });
     setLocalStream(null);
     if (pc.current) {
       pc.current.close();
