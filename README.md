@@ -4,9 +4,9 @@ dominoes, the algerian way
 
 ## todos
 
-- playing with bots
-- get webRTC running
-- themes and styling
+- get webRTC running with 4 peers;
+- playing with bots;
+- themes and styling;
 
 ## build APKs for android emulators and devices
 

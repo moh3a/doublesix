@@ -23,6 +23,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  arrayUnion,
 } from "firebase/firestore";
 
 import { db } from "../config/firebase.config";
@@ -40,10 +41,14 @@ const servers = {
 export default function CallScreen() {
   const insets = useSafeAreaInsets();
 
-  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+
   const [webcamStarted, setWebcamStarted] = useState(false);
-  const [channelId, setChannelId] = useState<string | null>(null);
+  const [channelId, setChannelId] = useState<string>(
+    String(Math.round(Math.random() * 1000000))
+  );
+
   const pc = useRef<RTCPeerConnection>();
 
   const channelDoc = doc(db, "channels", channelId);
@@ -60,131 +65,142 @@ export default function CallScreen() {
     "answerCandidates"
   );
 
-  const startWebcam = async () => {
+  const createPeerConnection = async (candidateType: "answer" | "offer") => {
     pc.current = new RTCPeerConnection(servers);
-    const local = await mediaDevices.getUserMedia({
-      video: true,
-      audio: true,
-    });
-    // pc.current.addStream(local); // todo: check this in case of error
-
-    const remote = new MediaStream({});
 
     // Push tracks from local stream to peer connection
-    local.getTracks().forEach((track) => {
-      pc.current.addTrack(track, local);
+    localStream.getTracks().forEach((track) => {
+      pc.current?.addTrack(track, localStream);
     });
 
     // Pull tracks from peer connection, add to remote video stream
     pc.current.ontrack = (event: any) => {
+      const remote = new MediaStream({});
       event.streams[0].getTracks().forEach((track) => {
         remote.addTrack(track);
       });
+      setRemoteStream(remote);
     };
 
-    pc.current.onaddstream = (event: any) => {
-      setRemoteStream(event.stream);
+    pc.current.onicecandidate = async (event: any) => {
+      if (event.candidate) {
+        try {
+          await addDoc(
+            candidateType === "answer" ? answerCandidates : offerCandidates,
+            event.candidate.toJSON()
+          );
+        } catch (error) {
+          console.log(error);
+        }
+      }
     };
+  };
+
+  const startWebcam = async () => {
+    const local = await mediaDevices.getUserMedia({
+      video: true,
+      audio: true,
+    });
 
     setLocalStream(local);
-    setRemoteStream(remote);
     setWebcamStarted(true);
   };
 
   const startCall = async () => {
-    setChannelId(channelDoc.id);
+    await createPeerConnection("offer");
 
-    pc.current.onicecandidate = async (event: any) => {
-      if (event.candidate) {
-        await addDoc(offerCandidates, event.candidate.toJSON());
+    if (pc.current) {
+      //create offer
+      const offerDescription = await pc.current.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true,
+      });
+      await pc.current.setLocalDescription(offerDescription);
+
+      const offer = {
+        sdp: offerDescription.sdp,
+        type: offerDescription.type,
+      };
+
+      try {
+        await setDoc(channelDoc, { offer });
+      } catch (error) {
+        console.log(error);
       }
-    };
 
-    //create offer
-    const sessionConstraints = {
-      mandatory: {
-        OfferToReceiveAudio: true,
-        OfferToReceiveVideo: true,
-        VoiceActivityDetection: true,
-      },
-    };
-    const offerDescription = await pc.current.createOffer(sessionConstraints);
-    await pc.current.setLocalDescription(offerDescription);
-
-    const offer = {
-      sdp: offerDescription.sdp,
-      type: offerDescription.type,
-    };
-
-    await setDoc(channelDoc, { offer });
-
-    // Listen for remote answer
-    onSnapshot(channelDoc, (snapshot) => {
-      const data = snapshot.data();
-      if (!pc.current.remoteDescription && data?.answer) {
-        const answerDescription = new RTCSessionDescription(data.answer);
-        pc.current.setRemoteDescription(answerDescription);
-      }
-    });
-
-    // When answered, add candidate to peer connection
-    onSnapshot(answerCandidates, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === "added") {
-          const data = change.doc.data();
-          pc.current.addIceCandidate(new RTCIceCandidate(data));
+      // Listen for remote answer
+      onSnapshot(channelDoc, (snapshot) => {
+        const data = snapshot.data();
+        if (data && data.answers) {
+          pc.current?.setRemoteDescription(
+            new RTCSessionDescription(data.answers[data.answers.length - 1])
+          );
         }
       });
-    });
+
+      // When answered, add candidate to peer connection
+      onSnapshot(answerCandidates, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === "added") {
+            const data = change.doc.data();
+            pc.current?.addIceCandidate(new RTCIceCandidate(data));
+          }
+        });
+      });
+    }
   };
 
   const joinCall = async () => {
-    pc.current.onicecandidate = async (event: any) => {
-      if (event.candidate) {
-        await addDoc(answerCandidates, event.candidate.toJSON());
-      }
-    };
+    await createPeerConnection("answer");
 
-    const channelDocument = await getDoc(channelDoc);
-    const channelData = channelDocument.data();
+    if (pc.current) {
+      const channelDocument = await getDoc(channelDoc);
+      const channelData = channelDocument.data();
 
-    const offerDescription = channelData.offer;
+      const offerDescription = channelData?.offer;
 
-    await pc.current.setRemoteDescription(
-      new RTCSessionDescription(offerDescription)
-    );
+      await pc.current.setRemoteDescription(
+        new RTCSessionDescription(offerDescription)
+      );
 
-    const answerDescription = await pc.current.createAnswer();
-    await pc.current.setLocalDescription(answerDescription);
+      const answerDescription = await pc.current.createAnswer();
+      await pc.current.setLocalDescription(answerDescription);
 
-    const answer = {
-      type: answerDescription.type,
-      sdp: answerDescription.sdp,
-    };
+      const answer = {
+        type: answerDescription.type,
+        sdp: answerDescription.sdp,
+      };
 
-    await updateDoc(channelDoc, { answer });
+      await updateDoc(channelDoc, { answers: arrayUnion(answer) });
 
-    onSnapshot(offerCandidates, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === "added") {
-          const data = change.doc.data();
-          pc.current.addIceCandidate(new RTCIceCandidate(data));
-        }
+      onSnapshot(offerCandidates, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === "added") {
+            const data = change.doc.data();
+            pc.current?.addIceCandidate(new RTCIceCandidate(data));
+          }
+        });
       });
-    });
+    }
   };
 
   const endCall = async () => {
-    pc.current.close();
-    const offerCandidatesDocs = await getDocs(offerCandidates);
-    for await (const document of offerCandidatesDocs.docs) {
-      await deleteDoc(doc(offerCandidates, document.id));
+    localStream?.getTracks().forEach((track) => localStream.removeTrack(track));
+    setLocalStream(null);
+    if (pc.current) {
+      pc.current.close();
+      pc.current = undefined;
     }
-    const answerCandidatesDocs = await getDocs(answerCandidates);
-    for await (const document of answerCandidatesDocs.docs) {
-      await deleteDoc(doc(answerCandidates, document.id));
-    }
-    await deleteDoc(channelDoc);
+    // const offerCandidatesDocs = await getDocs(offerCandidates);
+    // for await (const document of offerCandidatesDocs.docs) {
+    //   await deleteDoc(doc(offerCandidates, document.id));
+    // }
+    // const answerCandidatesDocs = await getDocs(answerCandidates);
+    // for await (const document of answerCandidatesDocs.docs) {
+    //   await deleteDoc(doc(answerCandidates, document.id));
+    // }
+    // await deleteDoc(channelDoc);
+    setWebcamStarted(false);
   };
 
   return (
@@ -199,35 +215,39 @@ export default function CallScreen() {
     >
       <KeyboardAvoidingView style={styles.body} behavior="position">
         <SafeAreaView>
-          {localStream && (
-            <RTCView
-              streamURL={localStream?.toURL()}
-              style={styles.stream}
-              objectFit="cover"
-              mirror
-            />
-          )}
-
-          {remoteStream && (
-            <RTCView
-              streamURL={remoteStream?.toURL()}
-              style={styles.stream}
-              objectFit="cover"
-              mirror
-            />
-          )}
+          <View
+            style={{ display: "flex", flexDirection: "row", height: "50%" }}
+          >
+            {localStream && (
+              <RTCView
+                streamURL={localStream?.toURL()}
+                style={styles.stream}
+                objectFit="cover"
+                mirror
+              />
+            )}
+            {remoteStream && (
+              <RTCView
+                streamURL={remoteStream?.toURL()}
+                style={styles.stream}
+                objectFit="cover"
+                mirror
+              />
+            )}
+          </View>
           <View style={styles.buttons}>
             {!webcamStarted && (
               <Button title="Start webcam" onPress={startWebcam} />
             )}
             {webcamStarted && <Button title="Start call" onPress={startCall} />}
+            {webcamStarted && <Button title="End call" onPress={endCall} />}
             {webcamStarted && (
               <View style={{ flexDirection: "row" }}>
                 <Button title="Join call" onPress={joinCall} />
                 <TextInput
                   value={channelId}
                   placeholder="callId"
-                  style={{ borderWidth: 1, padding: 5 }}
+                  style={{ borderWidth: 0.5, padding: 5, margin: 5 }}
                   onChangeText={(newText) => setChannelId(newText)}
                 />
               </View>
@@ -251,7 +271,8 @@ const styles = StyleSheet.create({
     height: 200,
   },
   buttons: {
-    alignItems: "flex-start",
+    display: "flex",
     flexDirection: "column",
+    alignItems: "flex-start",
   },
 });
